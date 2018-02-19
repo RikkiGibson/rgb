@@ -10,3 +10,4 @@ CTestTestfile.cmake
 .idea/
 bin/
 cmake-build-debug/
+.vscode/
