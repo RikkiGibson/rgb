@@ -33,12 +33,6 @@ constexpr enum Flags operator ~ (const enum Flags self)
     return (enum Flags) ~(uint8_t) self;
 }
 
-
-constexpr bool has_flags(const enum Flags self, enum Flags other)
-{
-    return (self & other) == other;
-}
-
 class Clock {
   public:
     uint8_t m, t;
@@ -50,6 +44,11 @@ class Registers {
     uint8_t ime;
     Flags f;
     uint16_t pc, sp;
+
+    constexpr bool has_flags(enum Flags other)
+    {
+        return (this->f & other) == other;
+    }
 
     uint16_t hl()
     {
@@ -356,17 +355,19 @@ class Z80 {
         reg.t = 16;
     }
 
-    void ADD_r(uint8_t &r)
+    void set_sum(uint16_t sum)
     {
-        uint16_t sum = reg.a + r;
         reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
         if (sum > 0xff) {
             reg.f |= Flags::Carry;
         }
         reg.a = (uint8_t) sum;
-        if (!reg.a) {
-            reg.f |= Flags::Zero;
-        }
+    }
+
+    void ADD_r(uint8_t r)
+    {
+        uint16_t sum = reg.a + r;
+        set_sum(sum);
         reg.m = 1;
         reg.t = 4;
     }
@@ -422,7 +423,7 @@ class Z80 {
         reg.t = 16;
     }
 
-    void ADC_r(uint8_t &r)
+    void ADC_r(uint8_t r)
     {
         uint16_t sum = reg.a + r;
         if ((reg.f & Flags::Carry) == Flags::Carry) {
@@ -432,7 +433,7 @@ class Z80 {
         if (sum > 0xff) {
             reg.f |= Flags::Carry;
         }
-        r = sum;
+        reg.a = sum;
         reg.m = 1;
         reg.t = 4;
     }
@@ -440,7 +441,7 @@ class Z80 {
     void ADC_HL()
     {
         uint16_t sum = reg.a + mmu.rb(reg.hl());
-        if (has_flags(reg.f, Flags::Carry)) {
+        if (reg.has_flags(Flags::Carry)) {
             sum++;
         }
         reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
@@ -456,7 +457,7 @@ class Z80 {
     {
         uint16_t sum = reg.a + mmu.rb(reg.pc);
         reg.pc++;
-        if (has_flags(reg.f, Flags::Carry)) {
+        if (reg.has_flags(Flags::Carry)) {
             sum++;
         }
         reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
@@ -468,17 +469,349 @@ class Z80 {
         reg.t = 8;
     }
 
-    void cp()
+
+    void set_diff_flags(int16_t diff)
     {
-        char i = reg.a;
-        i -= reg.b;
+        reg.f = (diff & 0xff) ? Flags::None : Flags::Zero;
         reg.f |= Flags::Operation;
-        if (!i) {
-            reg.f |= Flags::Zero;
+        if (diff < 0) {
+            reg.f |= Flags::Carry;
         }
-        clock.m = 1;
-        clock.t = 4;
     }
+
+    void set_diff(int16_t diff)
+    {
+        set_diff_flags(diff);
+        reg.a = diff & 0xff;
+    }
+
+    void SUB_r(uint8_t r)
+    {
+        int16_t diff = reg.a - r;
+        set_diff(diff);
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void SUB_HL()
+    {
+        int16_t diff = reg.a - mmu.rb(reg.hl());
+        set_diff(diff);
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void SUB_n()
+    {
+        int16_t diff = reg.a - mmu.rb(reg.pc);
+        reg.pc++;
+        set_diff(diff);
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void SBC_r(uint8_t r)
+    {
+        int16_t diff = reg.a - r;
+        if (reg.has_flags(Flags::Carry)) {
+            diff -= 1;
+        }
+        set_diff(diff);
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void SBC_HL()
+    {
+        int16_t diff = reg.a - mmu.rb(reg.hl());
+        if (reg.has_flags(Flags::Carry)) {
+            diff -= 1;
+        }
+        set_diff(diff);
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void SBC_n()
+    {
+        int16_t diff = reg.a - mmu.rb(reg.pc);
+        reg.pc++;
+        if (reg.has_flags(Flags::Carry)) {
+            diff -= 1;
+        }
+        set_diff(diff);
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void CP_r(uint8_t r)
+    {
+        int16_t sum = reg.a - r;
+        set_diff_flags(sum);
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void CP_HL()
+    {
+        int16_t sum = reg.a - mmu.rb(reg.hl());
+        set_diff_flags(sum);
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void CP_n()
+    {
+        int16_t sum = reg.a - mmu.rb(reg.pc);
+        reg.pc++;
+        set_diff_flags(sum);
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void AND_r(uint8_t r)
+    {
+        reg.a &= r;
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void AND_HL(uint8_t r)
+    {
+        reg.a &= mmu.rb(reg.hl());
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void AND_n(uint8_t r)
+    {
+        reg.a &= mmu.rb(reg.pc);
+        reg.pc++;
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void OR_r(uint8_t r)
+    {
+        reg.a |= r;
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void OR_HL(uint8_t r)
+    {
+        reg.a |= mmu.rb(reg.hl());
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void OR_n(uint8_t r)
+    {
+        reg.a |= mmu.rb(reg.pc);
+        reg.pc++;
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void XOR_r(uint8_t r)
+    {
+        reg.a ^= r;
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void XOR_HL(uint8_t r)
+    {
+        reg.a ^= mmu.rb(reg.hl());
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void XOR_n(uint8_t r)
+    {
+        reg.a ^= mmu.rb(reg.pc);
+        reg.pc++;
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void INC_r(uint8_t &r)
+    {
+        r++;
+        reg.f = r ? Flags::None : Flags::Zero;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void INC_HLm()
+    {
+        uint8_t res = mmu.rb(reg.hl()) + 1;
+        mmu.wb(reg.hl(), res);
+        reg.f = res ? Flags::None : Flags::Zero;
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void DEC_r(uint8_t &r)
+    {
+        r--;
+        reg.f = r ? Flags::None : Flags::Zero;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void DEC_HLm()
+    {
+        uint8_t res = mmu.rb(reg.hl()) - 1;
+        mmu.wb(reg.hl(), res);
+        reg.f = res ? Flags::None : Flags::Zero;
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void INC_BC()
+    {
+        reg.c++;
+        if (!reg.c) {
+            reg.b++;
+        }
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void INC_DE()
+    {
+        reg.e++;
+        if (!reg.e) {
+            reg.d++;
+        }
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void INC_HL()
+    {
+        reg.l++;
+        if (!reg.l) {
+            reg.h++;
+        }
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void INC_SP()
+    {
+        reg.sp++;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void DEC_BC()
+    {
+        reg.c--;
+        if (reg.c == 0xff) {
+            reg.b--;
+        }
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void DEC_DE()
+    {
+        reg.e--;
+        if (reg.e == 0xff) {
+            reg.d--;
+        }
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void DEC_HL()
+    {
+        reg.l--;
+        if (reg.l == 0xff) {
+            reg.h--;
+        }
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void DEC_SP()
+    {
+        reg.sp--;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void BIT_r(uint8_t r, uint8_t pos)
+    {
+        reg.f = r & (1 << pos) ? Flags::None : Flags::Zero;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void RL_A()
+    {
+        uint8_t lsb = reg.has_flags(Flags::Carry) ? 1 : 0;
+        // FIXME set flag after updating reg.a
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        if (reg.a & 0x80) {
+            reg.f |= Flags::Carry;
+        }
+        reg.a = (reg.a << 1) + lsb;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void RLC_A()
+    {
+        uint8_t lsb = reg.has_flags(Flags::Zero) ? 1 : 0;
+        reg.f = reg.a ? Flags::None : Flags::Zero;
+        if (reg.a & 0x80) {
+            reg.f |= Flags::Carry;
+        }
+        reg.a = (reg.a << 1) + lsb;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    // TODO RR_A, RRC_A
+
+    void RL_r(uint8_t &r)
+    {
+        uint8_t lsb = reg.has_flags(Flags::Carry) ? 1 : 0;
+        reg.f = r ? Flags::None : Flags::Zero;
+        if (r & 0x80) {
+            reg.f |= Flags::Carry;
+        }
+        r = (r << 1) + lsb;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void RL_HL()
+    {
+        uint8_t value = mmu.rb(reg.hl());
+        uint8_t lsb = reg.has_flags(Flags::Carry) ? 1 : 0;
+        reg.f = value ? Flags::None : Flags::Zero;
+        if (value & 0x80) {
+            reg.f |= Flags::Carry;
+        }
+        value = (value << 1) + lsb;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    // TODO RR_r
 
     void nop()
     {
