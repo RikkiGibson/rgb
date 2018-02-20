@@ -18,6 +18,26 @@ constexpr enum Flags& operator |= (enum Flags &self, const enum Flags other)
 {
     return self = (self | other);
 }
+constexpr enum Flags operator & (const enum Flags self, const enum Flags other)
+{
+    return (enum Flags)(uint8_t(self) & uint8_t(other));
+}
+
+constexpr enum Flags& operator &= (enum Flags &self, const enum Flags other)
+{
+    return self = (self | other);
+}
+
+constexpr enum Flags operator ~ (const enum Flags self)
+{
+    return (enum Flags) ~(uint8_t) self;
+}
+
+
+constexpr bool has_flags(const enum Flags self, enum Flags other)
+{
+    return (self & other) == other;
+}
 
 class Clock {
   public:
@@ -30,6 +50,30 @@ class Registers {
     uint8_t ime;
     Flags f;
     uint16_t pc, sp;
+
+    uint16_t hl()
+    {
+        uint16_t addr = ((uint16_t) h) << 8 | l;
+        return addr;
+    }
+
+    void set_hl(uint16_t value)
+    {
+        h = value >> 8;
+        l = value & 0xff;
+    }
+
+    uint16_t bc()
+    {
+        uint16_t addr = ((uint16_t) b) << 8 | c;
+        return addr;
+    }
+
+    uint16_t de()
+    {
+        uint16_t addr = ((uint16_t) b) << 8 | c;
+        return addr;
+    }
 };
 
 class Z80 {
@@ -54,10 +98,13 @@ class Z80 {
 
     void exec()
     {
-        reg.r = (reg.r + 1) & 127;
+        reg.r = (reg.r + 1) & 0x7f;
         uint8_t op = mmu.rb(reg.pc);
         switch (op) {
         case 0: nop(); break;
+        case 1: LD_BC_nn(); break;
+        case 2: LD_BCm_A(); break;
+        // TODO fill out this table after implementing ops
         }
 
         clock.m += reg.m;
@@ -66,12 +113,6 @@ class Z80 {
             mmu.inbios = false;
         }
 
-    }
-
-    uint16_t hl()
-    {
-        uint16_t addr = ((uint16_t) reg.h) << 8 | reg.l;
-        return addr;
     }
 
 // { Ops
@@ -87,7 +128,7 @@ class Z80 {
     // Load to register dst from H/L memory location
     void LD_r_HLm(uint8_t &dst)
     {
-        dst = mmu.rb(hl());
+        dst = mmu.rb(reg.hl());
         reg.m = 2;
         reg.t = 8;
     }
@@ -95,7 +136,7 @@ class Z80 {
     // Load to H/L memory location from register src
     void LD_HLm_r(uint8_t src)
     {
-        mmu.wb(hl(), src);
+        mmu.wb(reg.hl(), src);
         reg.m = 2;
         reg.t = 8;
     }
@@ -112,7 +153,7 @@ class Z80 {
     // Load to H/L memory location from PC memory location
     void LD_HL_mn()
     {
-        mmu.wb(hl(), mmu.rb(reg.pc));
+        mmu.wb(reg.hl(), mmu.rb(reg.pc));
         reg.pc++;
         reg.m = 3;
         reg.t = 12;
@@ -206,7 +247,7 @@ class Z80 {
     {
         uint16_t addr = mmu.rw(reg.pc);
         reg.pc += 2;
-        mmu.ww(addr, hl());
+        mmu.ww(addr, reg.hl());
         reg.m = 5;
         reg.t = 20;
     }
@@ -214,7 +255,7 @@ class Z80 {
     // Load to address in HL the value in register A. Increment HL.
     void LD_HLI_A()
     {
-        mmu.wb(hl(), reg.a);
+        mmu.wb(reg.hl(), reg.a);
         if (reg.l == 0xff) {
             reg.l = 0;
             reg.h++;
@@ -227,7 +268,7 @@ class Z80 {
 
     void LD_A_HLI()
     {
-        mmu.wb(hl(), reg.a);
+        mmu.wb(reg.hl(), reg.a);
         if (reg.l == 0xff) {
             reg.l = 0;
             reg.h++;
@@ -240,9 +281,9 @@ class Z80 {
 
     void LD_HLD_A()
     {
-        mmu.wb(hl(), reg.a);
+        mmu.wb(reg.hl(), reg.a);
         if (reg.l == 0) {
-            reg.l = 255;
+            reg.l = 0xff;
             reg.h--;
         } else {
             reg.l--;
@@ -253,9 +294,9 @@ class Z80 {
 
     void LD_A_HLD()
     {
-        reg.a = mmu.rb(hl());
+        reg.a = mmu.rb(reg.hl());
         if (reg.l == 0) {
-            reg.l = 255;
+            reg.l = 0xff;
             reg.h--;
         } else {
             reg.l--;
@@ -297,7 +338,7 @@ class Z80 {
     void LD_HL_SPn()
     {
         uint16_t value = mmu.rb(reg.pc);
-        if (value > 127) {
+        if (value > 0x7f) {
             value = -((~value+1)&0xff);
         }
         reg.pc++;
@@ -306,19 +347,125 @@ class Z80 {
         reg.l = value & 0xff;
     }
 
-    void add()
+    void SWAP_r(uint8_t &r)
     {
-        int res = reg.a + reg.e;
-        reg.f = Flags::None;
-        if (res > 0xff) {
+        uint8_t temp = r;
+        r = mmu.rb(reg.hl());
+        mmu.wb(reg.hl(), temp);
+        reg.m = 4;
+        reg.t = 16;
+    }
+
+    void ADD_r(uint8_t &r)
+    {
+        uint16_t sum = reg.a + r;
+        reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
+        if (sum > 0xff) {
             reg.f |= Flags::Carry;
         }
-        reg.a = (uint8_t) res; // truncates over 8 bits
+        reg.a = (uint8_t) sum;
         if (!reg.a) {
             reg.f |= Flags::Zero;
         }
-        clock.m = 1;
-        clock.t = 4;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void ADD_hl()
+    {
+        uint16_t sum = reg.a + mmu.rb(reg.hl());
+        reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
+        if (sum > 0xff) {
+            reg.f |= Flags::Carry;
+        }
+        reg.a = (uint8_t) sum;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void ADD_n()
+    {
+        uint16_t sum = reg.a + mmu.rb(reg.pc);
+        reg.pc++;
+        reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
+        if (sum > 0xff) {
+            reg.f |= Flags::Carry;
+        }
+        reg.a = (uint8_t) sum;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void ADD_HL(uint16_t value)
+    {
+        uint32_t sum = reg.hl() + value;
+        reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
+        if (sum > 0xffff) {
+            reg.f |= Flags::Carry;
+        } else {
+            // Not sure why it's done this way
+            reg.f &= ~Flags::Zero;
+        }
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void ADD_SP_n()
+    {
+        uint8_t value = mmu.rb(reg.pc);
+        if (value > 0x7f) {
+            value = -(~value+1);
+        }
+        reg.pc++;
+        reg.sp += value;
+        reg.m = 4;
+        reg.t = 16;
+    }
+
+    void ADC_r(uint8_t &r)
+    {
+        uint16_t sum = reg.a + r;
+        if ((reg.f & Flags::Carry) == Flags::Carry) {
+            sum++;
+        }
+        reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
+        if (sum > 0xff) {
+            reg.f |= Flags::Carry;
+        }
+        r = sum;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void ADC_HL()
+    {
+        uint16_t sum = reg.a + mmu.rb(reg.hl());
+        if (has_flags(reg.f, Flags::Carry)) {
+            sum++;
+        }
+        reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
+        if (sum > 0xff) {
+            reg.f |= Flags::Carry;
+        }
+        reg.a = (uint8_t) sum;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void ADC_n()
+    {
+        uint16_t sum = reg.a + mmu.rb(reg.pc);
+        reg.pc++;
+        if (has_flags(reg.f, Flags::Carry)) {
+            sum++;
+        }
+        reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
+        if (sum > 0xff) {
+            reg.f |= Flags::Carry;
+        }
+        reg.a = (uint8_t) sum;
+        reg.m = 2;
+        reg.t = 8;
     }
 
     void cp()
