@@ -2,6 +2,8 @@
 
 class MMU {
   public:
+    bool inbios;
+
     uint8_t rb(uint16_t addr)
     {
         return 0;
