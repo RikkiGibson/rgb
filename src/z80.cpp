@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cstdint>
 #include "mmu.cpp"
 
@@ -31,6 +32,23 @@ constexpr enum Flags& operator &= (enum Flags &self, const enum Flags other)
 constexpr enum Flags operator ~ (const enum Flags self)
 {
     return (enum Flags) ~(uint8_t) self;
+}
+
+constexpr enum Flags operator ^ (const enum Flags self, const enum Flags other)
+{
+    return (enum Flags)(uint8_t(self) ^ uint8_t(other));
+}
+
+int16_t decode_2c(uint8_t byte)
+{
+    int16_t ret;
+    if (byte > 127) {
+        // Decode 2's complement negative
+        ret = -(~byte+1);
+    } else {
+        ret = byte;
+    }
+    return ret;
 }
 
 class Clock {
@@ -100,10 +118,10 @@ class Z80 {
         reg.r = (reg.r + 1) & 0x7f;
         uint8_t op = mmu.rb(reg.pc);
         switch (op) {
-        case 0: nop(); break;
+        case 0: NOP(); break;
         case 1: LD_BC_nn(); break;
         case 2: LD_BCm_A(); break;
-        // TODO fill out this table after implementing ops
+
         }
 
         clock.m += reg.m;
@@ -762,7 +780,6 @@ class Z80 {
     void RL_A()
     {
         uint8_t lsb = reg.has_flags(Flags::Carry) ? 1 : 0;
-        // FIXME set flag after updating reg.a
         reg.f = reg.a ? Flags::None : Flags::Zero;
         if (reg.a & 0x80) {
             reg.f |= Flags::Carry;
@@ -774,17 +791,34 @@ class Z80 {
 
     void RLC_A()
     {
-        uint8_t lsb = reg.has_flags(Flags::Zero) ? 1 : 0;
-        reg.f = reg.a ? Flags::None : Flags::Zero;
-        if (reg.a & 0x80) {
-            reg.f |= Flags::Carry;
-        }
+        uint8_t lsb = (reg.a & 0x80) ? 1 : 0;
         reg.a = (reg.a << 1) + lsb;
+        if (!lsb) {
+            reg.f &= ~Flags::Zero;
+        }
         reg.m = 1;
         reg.t = 4;
     }
 
-    // TODO RR_A, RRC_A
+    void RR_A() {
+        uint8_t msb = reg.has_flags(Flags::Carry) ? 0x80 : 0;
+        if (~reg.a & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        reg.a = (reg.a >> 1) + msb;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void RRC_A() {
+        uint8_t msb = (reg.a & 1) ? 0x80 : 0;
+        if (~reg.a & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        reg.a = (reg.a >> 1) + msb;
+        reg.m = 1;
+        reg.t = 4;
+    }
 
     void RL_r(uint8_t &r)
     {
@@ -807,16 +841,447 @@ class Z80 {
             reg.f |= Flags::Carry;
         }
         value = (value << 1) + lsb;
+        mmu.wb(reg.hl(), value);
+        reg.m = 4;
+        reg.t = 16;
+    }
+
+    void RLC_r(uint8_t &r) {
+        uint8_t lsb = (r & 0x80) ? 1 : 0;
+        if (~r & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        r = (r >> 1) + lsb;
         reg.m = 2;
         reg.t = 8;
     }
 
-    // TODO RR_r
+    void RLC_HL() {
+        uint8_t value = mmu.rb(reg.hl());
+        uint8_t lsb = (value & 0x80) ? 1 : 0;
+        if (~value & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        value = (value >> 1) + lsb;
+        mmu.wb(reg.hl(), value);
+        reg.m = 4;
+        reg.t = 16;
+    }
 
-    void nop()
+    void RR_r(uint8_t &r) {
+        uint8_t msb = reg.has_flags(Flags::Carry) ? 0x80 : 0;
+        if (~r & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        r = (r >> 1) + msb;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void RR_HL()
+    {
+        uint8_t value = mmu.rb(reg.hl());
+        uint8_t msb = reg.has_flags(Flags::Carry) ? 0x80 : 0;
+        if (~value & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        value = (value >> 1) + msb;
+        mmu.wb(reg.hl(), value);
+        reg.m = 4;
+        reg.t = 16;
+    }
+
+    void RRC_r(uint8_t &r) {
+        uint8_t msb = (r & 1) ? 0x80 : 0;
+        if (~r & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        r = (r >> 1) + msb;
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void RRC_HL()
+    {
+        uint8_t value = mmu.rb(reg.hl());
+        uint8_t msb = (value & 1) ? 0x80 : 0;
+        if (~value & 1) {
+            reg.f &= ~Flags::Carry;
+        }
+        value = (value >> 1) + msb;
+        mmu.wb(reg.hl(), value);
+        reg.m = 4;
+        reg.t = 16;
+    }
+
+    void SLA_r(uint8_t &r)
+    {
+        reg.f = (r & 0x80) ? Flags::Carry : Flags::None;
+        r <<= 1;
+        if (!r) {
+            reg.f |= Flags::Zero;
+        }
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void SRA_r(uint8_t &r)
+    {
+        reg.f = (r & 1) ? Flags::Carry : Flags::None;
+        r = (r >> 1) | (r & 0x80);
+        if (!r) {
+            reg.f |= Flags::Zero;
+        }
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void SRL_r(uint8_t &r)
+    {
+        reg.f = (r & 1) ? Flags::Carry : Flags::None;
+        r = r >> 1;
+        if (!r) {
+            reg.f |= Flags::Zero;
+        }
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void CPL()
+    {
+        reg.a = ~reg.a;
+        reg.f = Flags::Operation;
+        if (!reg.a) {
+            reg.f |= Flags::Zero;
+        }
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void NEG()
+    {
+        reg.a = (~reg.a) + 1;
+        reg.f = Flags::Operation;
+        // Set Carry flag if result is negative (2's complement)?
+        if (reg.a & 0x80) {
+            reg.f |= Flags::Carry;
+        }
+        if (!reg.a) {
+            reg.f |= Flags::Zero;
+        }
+        reg.m = 2;
+        reg.t = 8;
+    }
+
+    void CCF()
+    {
+        reg.f = reg.f ^ Flags::Carry;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void SCF()
+    {
+        reg.f = reg.f | Flags::Carry;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    // Valid pairs: BC, DE, HL, AF
+    void PUSH(uint8_t r1, uint8_t r2)
+    {
+        mmu.wb(--reg.sp, r1);
+        mmu.wb(--reg.sp, r2);
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void POP(uint8_t &r1, uint8_t &r2)
+    {
+        r2 = mmu.rb(reg.sp++);
+        r1 = mmu.rb(reg.sp++);
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void JPnn()
+    {
+        reg.pc = mmu.rw(reg.pc);
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void JPHL()
+    {
+        reg.pc = reg.hl();
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void JPNZnn()
+    {
+        if (reg.has_flags(Flags::Zero)) {
+            reg.pc += 2;
+            reg.m = 3;
+            reg.t = 12;
+        } else {
+            reg.pc = mmu.rw(reg.pc);
+            reg.m = 4;
+            reg.t = 12;
+        }
+    }
+
+    void JPZnn()
+    {
+        if (reg.has_flags(Flags::Zero)) {
+            reg.pc = mmu.rw(reg.pc);
+            reg.m = 4;
+            reg.t = 12;
+        } else {
+            reg.pc += 2;
+            reg.m = 3;
+            reg.t = 12;
+        }
+    }
+
+    void JPNCnn()
+    {
+        if (reg.has_flags(Flags::Carry)) {
+            reg.pc += 2;
+            reg.m = 3;
+            reg.t = 12;
+        } else {
+            reg.pc = mmu.rw(reg.pc);
+            reg.m = 4;
+            reg.t = 12;
+        }
+    }
+
+    void JPCnn()
+    {
+        if (reg.has_flags(Flags::Carry)) {
+            reg.pc = mmu.rw(reg.pc);
+            reg.m = 4;
+            reg.t = 12;
+        } else {
+            reg.pc += 2;
+            reg.m = 3;
+            reg.t = 12;
+        }
+    }
+
+    void JRn()
+    {
+        int16_t value = decode_2c(mmu.rb(reg.pc));
+        reg.pc += value + 1;
+        reg.m += 3;
+        reg.t += 12;
+    }
+
+    void JRNZn()
+    {
+        if (reg.has_flags(Flags::Zero)) {
+            reg.pc++;
+            reg.m = 2;
+            reg.t = 8;
+        } else {
+            int16_t value = decode_2c(mmu.rb(reg.pc));
+            reg.pc += value + 1;
+            reg.m += 3;
+            reg.t += 12;
+        }
+    }
+
+    void JRZn()
+    {
+        if (reg.has_flags(Flags::Zero)) {
+            int16_t value = decode_2c(mmu.rb(reg.pc));
+            reg.pc += value + 1;
+            reg.m += 3;
+            reg.t += 12;
+        } else {
+            reg.pc++;
+            reg.m = 2;
+            reg.t = 8;
+        }
+    }
+
+    void JRNCn()
+    {
+        if (reg.has_flags(Flags::Carry)) {
+            reg.pc++;
+            reg.m = 2;
+            reg.t = 8;
+        } else {
+            int16_t value = decode_2c(mmu.rb(reg.pc));
+            reg.pc += value + 1;
+            reg.m += 3;
+            reg.t += 12;
+        }
+    }
+
+    void JRCn()
+    {
+        if (reg.has_flags(Flags::Carry)) {
+            int16_t value = decode_2c(mmu.rb(reg.pc));
+            reg.pc += value + 1;
+            reg.m += 3;
+            reg.t += 12;
+        } else {
+            reg.pc++;
+            reg.m = 2;
+            reg.t = 8;
+        }
+    }
+
+    void DJNZn()
+    {
+        reg.b--;
+        if (reg.b) {
+            int16_t value = decode_2c(mmu.rb(reg.pc));
+            reg.pc += value + 1;
+            reg.m = 3;
+            reg.t = 12;
+        } else {
+            reg.pc++;
+            reg.m = 2;
+            reg.t = 8;
+        }
+    }
+
+    void CALLnn()
+    {
+        reg.sp -= 2;
+        mmu.ww(reg.sp, reg.pc+2);
+        reg.pc = mmu.rw(reg.pc);
+        reg.m = 5;
+        reg.t = 20;
+    }
+
+    void CALL_cond(bool cond)
+    {
+        if (reg.has_flags(Flags::Zero)) {
+            reg.sp -= 2;
+            mmu.ww(reg.sp, reg.pc+2);
+            reg.pc = mmu.rw(reg.pc);
+            reg.m = 5;
+            reg.t = 20;
+        } else {
+            reg.pc += 2;
+            reg.m = 3;
+            reg.t = 12;
+        }
+    }
+
+    void CALLNZnn()
+    {
+        CALL_cond(!reg.has_flags(Flags::Zero));
+    }
+
+    void CALLZnn()
+    {
+        CALL_cond(reg.has_flags(Flags::Zero));
+    }
+
+    void CALLNCnn()
+    {
+        CALL_cond(!reg.has_flags(Flags::Carry));
+    }
+
+    void CALLCnn()
+    {
+        CALL_cond(reg.has_flags(Flags::Carry));
+    }
+
+    void RET()
+    {
+        reg.pc = mmu.rw(reg.sp);
+        reg.sp += 2;
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void RETI()
+    {
+        reg.ime = 1;
+        reg.pc = mmu.rw(reg.sp);
+        reg.sp += 2;
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void RET_cond(bool cond) {
+        if (cond) {
+            reg.pc = mmu.rw(reg.sp);
+            reg.sp += 2;
+            reg.m = 3;
+            reg.t = 12;
+        } else {
+            reg.m = 1;
+            reg.t = 4;
+        }
+    }
+
+    void RETNZ()
+    {
+        RET_cond(!reg.has_flags(Flags::Zero));
+    }
+
+    void RETZ()
+    {
+        RET_cond(reg.has_flags(Flags::Zero));
+    }
+
+    void RETNC()
+    {
+        RET_cond(!reg.has_flags(Flags::Carry));
+    }
+
+    void RETC()
+    {
+        RET_cond(reg.has_flags(Flags::Carry));
+    }
+
+    void RST_addr(uint16_t addr)
+    {
+        reg.sp -= 2;
+        mmu.ww(reg.sp, reg.pc);
+        reg.pc = addr;
+        reg.m = 3;
+        reg.t = 12;
+    }
+
+    void NOP()
     {
         clock.m = 1;
         clock.t = 4;
+    }
+
+    void HALT()
+    {
+        halt = true;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void DI()
+    {
+        reg.ime = 0;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void EI()
+    {
+        reg.ime = 1;
+        reg.m = 1;
+        reg.t = 4;
+    }
+
+    void panic()
+    {
+        std::cerr << "Unknown instruction at address " << reg.pc-1 << "\n";
+        stop = 1;
     }
 
     void pushbc()
