@@ -116,7 +116,17 @@ class Z80 {
     void exec()
     {
         reg.r = (reg.r + 1) & 0x7f;
-        uint8_t op = mmu.rb(reg.pc);
+        uint8_t op = mmu.rb(reg.pc++);
+        dispatch_op(op);
+        clock.m += reg.m;
+        clock.t += clock.t;
+        if (mmu.inbios && reg.pc == 0x0100) {
+            mmu.inbios = false;
+        }
+    }
+
+    void dispatch_op(uint8_t op)
+    {
         switch (op) {
         case 0x00: NOP(); break;
         case 0x01: LD_BC_nn(); break;
@@ -333,7 +343,7 @@ class Z80 {
         case 0xc8: RETZ(); break;
         case 0xc9: RET(); break;
         case 0xca: JPZnn(); break;
-        case 0xcb: exec_cb(); break;
+        case 0xcb: dispatch_cb_op(); break;
         case 0xcc: CALLZnn(); break;
         case 0xcd: CALLnn(); break;
         case 0xce: ADC_n(); break;
@@ -390,16 +400,9 @@ class Z80 {
         case 0xfe: CP_n(); break;
         case 0xff: RST(0x38); break;
         }
-
-        clock.m += reg.m;
-        clock.t += clock.t;
-        if (mmu.inbios && reg.pc == 0x0100) {
-            mmu.inbios = false;
-        }
-
     }
 
-    void exec_cb()
+    void dispatch_cb_op()
     {
         uint8_t value = mmu.rb(reg.pc);
         reg.pc++;
