@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <cstdint>
 #include "mmu.cpp"
 
@@ -1729,4 +1730,25 @@ class Z80 {
         stop = true;
     }
 // }
+
+    void dump_state(std::ostream &out)
+    {
+        out.fill('0');
+        out << "A(0x" << std::hex << std::setw(2) << (int) reg.a << "), ";
+        out << "B(0x" << std::hex << std::setw(2) << (int) reg.b << "), ";
+        out << "C(0x" << std::hex << std::setw(2) << (int) reg.c << "), ";
+        out << "D(0x" << std::hex << std::setw(2) << (int) reg.d << "), ";
+        out << "E(0x" << std::hex << std::setw(2) << (int) reg.e << "), ";
+        out << "F(0x" << std::hex << std::setw(2) << (int) reg.f << "), ";
+        out << "H(0x" << std::hex << std::setw(2) << (int) reg.h << "), ";
+        out << "L(0x" << std::hex << std::setw(2) << (int) reg.l << "), ";
+
+        out << "PC(0x" << std::hex << std::setw(4) << (int) reg.pc
+            << ", *0x" << std::setw(2) << (int) mmu.rb(reg.pc) << "), ";
+
+        out << "M(" << std::hex << std::setw(2) << (int) clock.m << "), ";
+        out << "T(" << std::hex << std::setw(2) << (int) clock.t << "), ";
+
+        out << "\n";
+    }
 };
