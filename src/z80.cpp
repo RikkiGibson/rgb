@@ -547,6 +547,7 @@ class Z80 {
             << "Bad extended instruction at address "
             << reg.pc-1
             << "\n";
+            stop = true;
         }
     }
 
@@ -1725,7 +1726,7 @@ class Z80 {
     void panic()
     {
         std::cerr << "Unknown instruction at address " << reg.pc-1 << "\n";
-        stop = 1;
+        stop = true;
     }
 // }
 };
