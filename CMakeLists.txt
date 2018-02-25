@@ -14,6 +14,10 @@ include_directories("${PROJECT_SOURCE_DIR}")
 
 add_executable(rgb ${PROJECT_SOURCE_DIR}/rgb.cpp)
 
+# SDL
+# TODO: make this cross-platform
+set_target_properties(rgb PROPERTIES LINK_FLAGS "-L/usr/local/lib -lSDLmain -lSDL -Wl,-framework,Cocoa")
+
 # Link Boost if desired
 # find_package(Boost 1.66 COMPONENTS filesystem)
 # target_link_libraries(rgb ${Boost_LIBRARIES})
