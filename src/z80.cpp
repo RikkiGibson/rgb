@@ -333,7 +333,7 @@ class Z80 {
         case 0xc8: RETZ(); break;
         case 0xc9: RET(); break;
         case 0xca: JPZnn(); break;
-        case 0xcb: panic(); break; /*** TODO: MAPcb ***/
+        case 0xcb: exec_cb(); break;
         case 0xcc: CALLZnn(); break;
         case 0xcd: CALLnn(); break;
         case 0xce: ADC_n(); break;
@@ -397,6 +397,154 @@ class Z80 {
             mmu.inbios = false;
         }
 
+    }
+
+    void exec_cb()
+    {
+        uint8_t value = mmu.rb(reg.pc);
+        reg.pc++;
+        switch (value) {
+        case 0x00: RLC_r(reg.b); break;
+        case 0x01: RLC_r(reg.c); break;
+        case 0x02: RLC_r(reg.d); break;
+        case 0x03: RLC_r(reg.e); break;
+        case 0x04: RLC_r(reg.h); break;
+        case 0x05: RLC_r(reg.l); break;
+        case 0x06: RLC_HL(); break;
+        case 0x07: RLC_r(reg.a); break;
+        case 0x08: RRC_r(reg.b); break;
+        case 0x09: RRC_r(reg.c); break;
+        case 0x0a: RRC_r(reg.d); break;
+        case 0x0b: RRC_r(reg.e); break;
+        case 0x0c: RRC_r(reg.h); break;
+        case 0x0d: RRC_r(reg.l); break;
+        case 0x0e: RRC_HL(); break;
+        case 0x0f: RRC_r(reg.a); break;
+
+        case 0x10: RL_r(reg.b); break;
+        case 0x11: RL_r(reg.c); break;
+        case 0x12: RL_r(reg.d); break;
+        case 0x13: RL_r(reg.e); break;
+        case 0x14: RL_r(reg.h); break;
+        case 0x15: RL_r(reg.l); break;
+        case 0x16: RL_HL(); break;
+        case 0x17: RL_r(reg.a); break;
+        case 0x18: RR_r(reg.b); break;
+        case 0x19: RR_r(reg.c); break;
+        case 0x1a: RR_r(reg.d); break;
+        case 0x1b: RR_r(reg.e); break;
+        case 0x1c: RR_r(reg.h); break;
+        case 0x1d: RR_r(reg.l); break;
+        case 0x1e: RR_HL(); break;
+        case 0x1f: RR_r(reg.a); break;
+
+        case 0x20: SLA_r(reg.b); break;
+        case 0x21: SLA_r(reg.c); break;
+        case 0x22: SLA_r(reg.d); break;
+        case 0x23: SLA_r(reg.e); break;
+        case 0x24: SLA_r(reg.h); break;
+        case 0x25: SLA_r(reg.l); break;
+        case 0x26: panic(); break;
+        case 0x27: SLA_r(reg.a); break;
+        case 0x28: SRA_r(reg.b); break;
+        case 0x29: SRA_r(reg.c); break;
+        case 0x2a: SRA_r(reg.d); break;
+        case 0x2b: SRA_r(reg.e); break;
+        case 0x2c: SRA_r(reg.h); break;
+        case 0x2d: SRA_r(reg.l); break;
+        case 0x2e: panic(); break;
+        case 0x2f: SRA_r(reg.a); break;
+
+        case 0x30: SWAP_r(reg.b); break;
+        case 0x31: SWAP_r(reg.c); break;
+        case 0x32: SWAP_r(reg.d); break;
+        case 0x33: SWAP_r(reg.e); break;
+        case 0x34: SWAP_r(reg.h); break;
+        case 0x35: SWAP_r(reg.l); break;
+        case 0x36: panic(); break;
+        case 0x37: SWAP_r(reg.a); break;
+        case 0x38: SRL_r(reg.b); break;
+        case 0x39: SRL_r(reg.c); break;
+        case 0x3a: SRL_r(reg.d); break;
+        case 0x3b: SRL_r(reg.e); break;
+        case 0x3c: SRL_r(reg.h); break;
+        case 0x3d: SRL_r(reg.l); break;
+        case 0x3e: panic(); break;
+        case 0x3f: SRL_r(reg.a); break;
+
+        case 0x40: BIT_r(reg.b, 0); break;
+        case 0x41: BIT_r(reg.c, 0); break;
+        case 0x42: BIT_r(reg.d, 0); break;
+        case 0x43: BIT_r(reg.e, 0); break;
+        case 0x44: BIT_r(reg.h, 0); break;
+        case 0x45: BIT_r(reg.l, 0); break;
+        case 0x46: BIT_r(reg.m, 0); break;
+        case 0x47: BIT_r(reg.a, 0); break;
+        case 0x48: BIT_r(reg.b, 1); break;
+        case 0x49: BIT_r(reg.c, 1); break;
+        case 0x4a: BIT_r(reg.d, 1); break;
+        case 0x4b: BIT_r(reg.e, 1); break;
+        case 0x4c: BIT_r(reg.h, 1); break;
+        case 0x4d: BIT_r(reg.l, 1); break;
+        case 0x4e: BIT_r(reg.m, 1); break;
+        case 0x4f: BIT_r(reg.a, 1); break;
+
+        case 0x50: BIT_r(reg.b, 2); break;
+        case 0x51: BIT_r(reg.c, 2); break;
+        case 0x52: BIT_r(reg.d, 2); break;
+        case 0x53: BIT_r(reg.e, 2); break;
+        case 0x54: BIT_r(reg.h, 2); break;
+        case 0x55: BIT_r(reg.l, 2); break;
+        case 0x56: BIT_r(reg.m, 2); break;
+        case 0x57: BIT_r(reg.a, 2); break;
+        case 0x58: BIT_r(reg.b, 3); break;
+        case 0x59: BIT_r(reg.c, 3); break;
+        case 0x5a: BIT_r(reg.d, 3); break;
+        case 0x5b: BIT_r(reg.e, 3); break;
+        case 0x5c: BIT_r(reg.h, 3); break;
+        case 0x5d: BIT_r(reg.l, 3); break;
+        case 0x5e: BIT_r(reg.m, 3); break;
+        case 0x5f: BIT_r(reg.a, 3); break;
+
+        case 0x60: BIT_r(reg.b, 4); break;
+        case 0x61: BIT_r(reg.c, 4); break;
+        case 0x62: BIT_r(reg.d, 4); break;
+        case 0x63: BIT_r(reg.e, 4); break;
+        case 0x64: BIT_r(reg.h, 4); break;
+        case 0x65: BIT_r(reg.l, 4); break;
+        case 0x66: BIT_r(reg.m, 4); break;
+        case 0x67: BIT_r(reg.a, 4); break;
+        case 0x68: BIT_r(reg.b, 5); break;
+        case 0x69: BIT_r(reg.c, 5); break;
+        case 0x6a: BIT_r(reg.d, 5); break;
+        case 0x6b: BIT_r(reg.e, 5); break;
+        case 0x6c: BIT_r(reg.h, 5); break;
+        case 0x6d: BIT_r(reg.l, 5); break;
+        case 0x6e: BIT_r(reg.m, 5); break;
+        case 0x6f: BIT_r(reg.a, 5); break;
+
+        case 0x70: BIT_r(reg.b, 6); break;
+        case 0x71: BIT_r(reg.c, 6); break;
+        case 0x72: BIT_r(reg.d, 6); break;
+        case 0x73: BIT_r(reg.e, 6); break;
+        case 0x74: BIT_r(reg.h, 6); break;
+        case 0x75: BIT_r(reg.l, 6); break;
+        case 0x76: BIT_r(reg.m, 6); break;
+        case 0x77: BIT_r(reg.a, 6); break;
+        case 0x78: BIT_r(reg.b, 7); break;
+        case 0x79: BIT_r(reg.c, 7); break;
+        case 0x7a: BIT_r(reg.d, 7); break;
+        case 0x7b: BIT_r(reg.e, 7); break;
+        case 0x7c: BIT_r(reg.h, 7); break;
+        case 0x7d: BIT_r(reg.l, 7); break;
+        case 0x7e: BIT_r(reg.m, 7); break;
+        case 0x7f: BIT_r(reg.a, 7); break;
+
+        default: std::cerr
+            << "Bad extended instruction at address "
+            << reg.pc-1
+            << "\n";
+        }
     }
 
 // { Ops
