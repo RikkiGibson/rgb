@@ -118,10 +118,277 @@ class Z80 {
         reg.r = (reg.r + 1) & 0x7f;
         uint8_t op = mmu.rb(reg.pc);
         switch (op) {
-        case 0: NOP(); break;
-        case 1: LD_BC_nn(); break;
-        case 2: LD_BCm_A(); break;
+        case 0x00: NOP(); break;
+        case 0x01: LD_BC_nn(); break;
+        case 0x02: LD_BCm_A(); break;
+        case 0x03: INC_BC(); break;
+        case 0x04: INC_r(reg.b); break;
+        case 0x05: DEC_r(reg.b); break;
+        case 0x06: LD_r_n(reg.b); break;
+        case 0x07: RLC_A(); break;
+        case 0x08: LD_mm_SP(); break;
+        case 0x09: ADD_HL(reg.bc()); break;
+        case 0x0a: LD_A_BCm(); break;
+        case 0x0b: DEC_BC(); break;
+        case 0x0c: INC_r(reg.c); break;
+        case 0x0d: DEC_r(reg.c); break;
+        case 0x0e: LD_r_n(reg.c); break;
+        case 0x0f: RRC_A(); break;
 
+        case 0x10: DJNZn(); break;
+        case 0x11: LD_DE_nn(); break;
+        case 0x12: LD_DEm_A(); break;
+        case 0x13: INC_DE(); break;
+        case 0x14: INC_r(reg.d); break;
+        case 0x15: DEC_r(reg.d); break;
+        case 0x16: LD_r_n(reg.d); break;
+        case 0x17: RL_A(); break;
+        case 0x18: JRn(); break;
+        case 0x19: ADD_HL(reg.de()); break;
+        case 0x1a: LD_A_DEm(); break;
+        case 0x1b: DEC_DE(); break;
+        case 0x1c: INC_r(reg.e); break;
+        case 0x1d: DEC_r(reg.e); break;
+        case 0x1e: LD_r_n(reg.e); break;
+        case 0x1f: RR_A(); break;
+
+        case 0x20: JRNZn(); break;
+        case 0x21: LD_HL_nn(); break;
+        case 0x22: LD_HLI_A(); break;
+        case 0x23: INC_HL(); break;
+        case 0x24: INC_r(reg.h); break;
+        case 0x25: DEC_r(reg.h); break;
+        case 0x26: LD_r_n(reg.h); break;
+        case 0x27: panic(); break;
+        case 0x28: JRZn(); break;
+        case 0x29: ADD_HL(reg.hl()); break;
+        case 0x2a: LD_A_HLI(); break;
+        case 0x2b: DEC_HL(); break;
+        case 0x2c: INC_r(reg.l); break;
+        case 0x2d: DEC_r(reg.l); break;
+        case 0x2e: LD_r_n(reg.l); break;
+        case 0x2f: CPL(); break;
+
+        case 0x30: JRNCn(); break;
+        case 0x31: LD_SP_nn(); break;
+        case 0x32: LD_HLD_A(); break;
+        case 0x33: INC_SP(); break;
+        case 0x34: INC_HLm(); break;
+        case 0x35: DEC_HLm(); break;
+        case 0x36: LD_HL_mn(); break;
+        case 0x37: SCF(); break;
+        case 0x38: JRCn(); break;
+        case 0x39: ADD_HL(reg.sp); break;
+        case 0x3a: LD_A_HLD(); break;
+        case 0x3b: DEC_SP(); break;
+        case 0x3c: INC_r(reg.a); break;
+        case 0x3d: DEC_r(reg.a); break;
+        case 0x3e: LD_r_n(reg.a); break;
+        case 0x3f: CCF(); break;
+
+        case 0x40: LD_rr(reg.b, reg.b); break;
+        case 0x41: LD_rr(reg.b, reg.c); break;
+        case 0x42: LD_rr(reg.b, reg.d); break;
+        case 0x43: LD_rr(reg.b, reg.e); break;
+        case 0x44: LD_rr(reg.b, reg.h); break;
+        case 0x45: LD_rr(reg.b, reg.l); break;
+        case 0x46: LD_r_HLm(reg.b); break;
+        case 0x47: LD_rr(reg.b, reg.a); break;
+        case 0x48: LD_rr(reg.c, reg.b); break;
+        case 0x49: LD_rr(reg.c, reg.c); break;
+        case 0x4a: LD_rr(reg.c, reg.d); break;
+        case 0x4b: LD_rr(reg.c, reg.e); break;
+        case 0x4c: LD_rr(reg.c, reg.h); break;
+        case 0x4d: LD_rr(reg.c, reg.l); break;
+        case 0x4e: LD_r_HLm(reg.c); break;
+        case 0x4f: LD_rr(reg.c, reg.a); break;
+
+        case 0x50: LD_rr(reg.d, reg.b); break;
+        case 0x51: LD_rr(reg.d, reg.c); break;
+        case 0x52: LD_rr(reg.d, reg.d); break;
+        case 0x53: LD_rr(reg.d, reg.e); break;
+        case 0x54: LD_rr(reg.d, reg.h); break;
+        case 0x55: LD_rr(reg.d, reg.l); break;
+        case 0x56: LD_r_HLm(reg.d); break;
+        case 0x57: LD_rr(reg.d, reg.a); break;
+        case 0x58: LD_rr(reg.e, reg.b); break;
+        case 0x59: LD_rr(reg.e, reg.c); break;
+        case 0x5a: LD_rr(reg.e, reg.d); break;
+        case 0x5b: LD_rr(reg.e, reg.e); break;
+        case 0x5c: LD_rr(reg.e, reg.h); break;
+        case 0x5d: LD_rr(reg.e, reg.l); break;
+        case 0x5e: LD_r_HLm(reg.e); break;
+        case 0x5f: LD_rr(reg.e, reg.a); break;
+
+        case 0x60: LD_rr(reg.h, reg.b); break;
+        case 0x61: LD_rr(reg.h, reg.c); break;
+        case 0x62: LD_rr(reg.h, reg.d); break;
+        case 0x63: LD_rr(reg.h, reg.e); break;
+        case 0x64: LD_rr(reg.h, reg.h); break;
+        case 0x65: LD_rr(reg.h, reg.l); break;
+        case 0x66: LD_r_HLm(reg.h); break;
+        case 0x67: LD_rr(reg.h, reg.a); break;
+        case 0x68: LD_rr(reg.l, reg.b); break;
+        case 0x69: LD_rr(reg.l, reg.c); break;
+        case 0x6a: LD_rr(reg.l, reg.d); break;
+        case 0x6b: LD_rr(reg.l, reg.e); break;
+        case 0x6c: LD_rr(reg.l, reg.h); break;
+        case 0x6d: LD_rr(reg.l, reg.l); break;
+        case 0x6e: LD_r_HLm(reg.l); break;
+        case 0x6f: LD_rr(reg.l, reg.a); break;
+
+        case 0x70: LD_HLm_r(reg.b); break;
+        case 0x71: LD_HLm_r(reg.c); break;
+        case 0x72: LD_HLm_r(reg.d); break;
+        case 0x73: LD_HLm_r(reg.e); break;
+        case 0x74: LD_HLm_r(reg.h); break;
+        case 0x75: LD_HLm_r(reg.l); break;
+        case 0x76: HALT(); break;
+        case 0x77: LD_HLm_r(reg.a); break;
+        case 0x78: LD_rr(reg.a, reg.b); break;
+        case 0x79: LD_rr(reg.a, reg.c); break;
+        case 0x7a: LD_rr(reg.a, reg.d); break;
+        case 0x7b: LD_rr(reg.a, reg.e); break;
+        case 0x7c: LD_rr(reg.a, reg.h); break;
+        case 0x7d: LD_rr(reg.a, reg.l); break;
+        case 0x7e: LD_r_HLm(reg.a); break;
+        case 0x7f: LD_rr(reg.a, reg.a); break;
+
+        case 0x80: ADD_r(reg.b); break;
+        case 0x81: ADD_r(reg.c); break;
+        case 0x82: ADD_r(reg.d); break;
+        case 0x83: ADD_r(reg.e); break;
+        case 0x84: ADD_r(reg.h); break;
+        case 0x85: ADD_r(reg.l); break;
+        case 0x86: ADD_A_HL(); break;
+        case 0x87: ADD_r(reg.a); break;
+        case 0x88: ADC_r(reg.b); break;
+        case 0x89: ADC_r(reg.c); break;
+        case 0x8a: ADC_r(reg.d); break;
+        case 0x8b: ADC_r(reg.e); break;
+        case 0x8c: ADC_r(reg.h); break;
+        case 0x8d: ADC_r(reg.l); break;
+        case 0x8e: ADC_A_HL(); break;
+        case 0x8f: ADC_r(reg.a); break;
+
+        case 0x90: SUB_r(reg.b); break;
+        case 0x91: SUB_r(reg.c); break;
+        case 0x92: SUB_r(reg.d); break;
+        case 0x93: SUB_r(reg.e); break;
+        case 0x94: SUB_r(reg.h); break;
+        case 0x95: SUB_r(reg.l); break;
+        case 0x96: SUB_HL(); break;
+        case 0x97: SUB_r(reg.a); break;
+        case 0x98: SBC_r(reg.b); break;
+        case 0x99: SBC_r(reg.c); break;
+        case 0x9a: SBC_r(reg.d); break;
+        case 0x9b: SBC_r(reg.e); break;
+        case 0x9c: SBC_r(reg.h); break;
+        case 0x9d: SBC_r(reg.l); break;
+        case 0x9e: SBC_HL(); break;
+        case 0x9f: SBC_r(reg.a); break;
+
+        case 0xa0: AND_r(reg.b); break;
+        case 0xa1: AND_r(reg.c); break;
+        case 0xa2: AND_r(reg.d); break;
+        case 0xa3: AND_r(reg.e); break;
+        case 0xa4: AND_r(reg.h); break;
+        case 0xa5: AND_r(reg.l); break;
+        case 0xa6: AND_HL(); break;
+        case 0xa7: AND_r(reg.a); break;
+        case 0xa8: XOR_r(reg.b); break;
+        case 0xa9: XOR_r(reg.c); break;
+        case 0xaa: XOR_r(reg.d); break;
+        case 0xab: XOR_r(reg.e); break;
+        case 0xac: XOR_r(reg.h); break;
+        case 0xad: XOR_r(reg.l); break;
+        case 0xae: XOR_HL(); break;
+        case 0xaf: XOR_r(reg.a); break;
+
+        case 0xb0: OR_r(reg.b); break;
+        case 0xb1: OR_r(reg.c); break;
+        case 0xb2: OR_r(reg.d); break;
+        case 0xb3: OR_r(reg.e); break;
+        case 0xb4: OR_r(reg.h); break;
+        case 0xb5: OR_r(reg.l); break;
+        case 0xb6: OR_HL(); break;
+        case 0xb7: OR_r(reg.a); break;
+        case 0xb8: CP_r(reg.b); break;
+        case 0xb9: CP_r(reg.c); break;
+        case 0xba: CP_r(reg.d); break;
+        case 0xbb: CP_r(reg.e); break;
+        case 0xbc: CP_r(reg.h); break;
+        case 0xbd: CP_r(reg.l); break;
+        case 0xbe: CP_HL(); break;
+        case 0xbf: CP_r(reg.a); break;
+
+        case 0xc0: RETNZ(); break;
+        case 0xc1: POP(reg.b, reg.c); break;
+        case 0xc2: JPNZnn(); break;
+        case 0xc3: JPnn(); break;
+        case 0xc4: CALLNZnn(); break;
+        case 0xc5: PUSH(reg.b, reg.c); break;
+        case 0xc6: ADD_n(); break;
+        case 0xc7: RST(0x00); break;
+        case 0xc8: RETZ(); break;
+        case 0xc9: RET(); break;
+        case 0xca: JPZnn(); break;
+        case 0xcb: panic(); break; /*** TODO: MAPcb ***/
+        case 0xcc: CALLZnn(); break;
+        case 0xcd: CALLnn(); break;
+        case 0xce: ADC_n(); break;
+        case 0xcf: RST(0x08); break;
+
+        case 0xd0: RETNC(); break;
+        case 0xd1: POP(reg.d, reg.e); break;
+        case 0xd2: JPNCnn(); break;
+        case 0xd3: panic(); break;
+        case 0xd4: CALLNCnn(); break;
+        case 0xd5: PUSH(reg.d, reg.e); break;
+        case 0xd6: SUB_n(); break;
+        case 0xd7: RST(0x10); break;
+        case 0xd8: RETC(); break;
+        case 0xd9: RETI(); break;
+        case 0xda: JPCnn(); break;
+        case 0xdb: panic(); break;
+        case 0xdc: CALLCnn(); break;
+        case 0xdd: panic(); break;
+        case 0xde: SBC_n(); break;
+        case 0xdf: RST(0x18); break;
+
+        case 0xe0: LD_IOn_A(); break;
+        case 0xe1: POP(reg.h, reg.l); break;
+        case 0xe2: LD_IOC_A(); break;
+        case 0xe3: panic(); break;
+        case 0xe4: panic(); break;
+        case 0xe5: PUSH(reg.h, reg.l); break;
+        case 0xe6: AND_n(); break;
+        case 0xe7: RST(0x20); break;
+        case 0xe8: ADD_SP_n(); break;
+        case 0xe9: JPHL(); break;
+        case 0xea: LD_mm_A(); break;
+        case 0xeb: panic(); break;
+        case 0xec: panic(); break;
+        case 0xed: panic(); break;
+        case 0xee: OR_n(); break;
+        case 0xef: RST(0x28); break;
+
+        case 0xf0: LD_A_IOn(); break;
+        case 0xf1: POP(reg.a, (uint8_t &) reg.f); break;
+        case 0xf2: LD_A_IOC(); break;
+        case 0xf3: DI(); break;
+        case 0xf4: panic(); break;
+        case 0xf5: PUSH(reg.a, (uint8_t &) reg.f); break;
+        case 0xf6: XOR_n(); break;
+        case 0xf7: RST(0x30); break;
+        case 0xf8: LD_HL_SPn(); break;
+        case 0xf9: panic(); break;
+        case 0xfa: LD_A_mm(); break;
+        case 0xfb: EI(); break;
+        case 0xfc: panic(); break;
+        case 0xfd: panic(); break;
+        case 0xfe: CP_n(); break;
+        case 0xff: RST(0x38); break;
         }
 
         clock.m += reg.m;
@@ -194,6 +461,15 @@ class Z80 {
         reg.t = 8;
     }
 
+    // Load to memory location in PC from register A
+    void LD_mm_A()
+    {
+        mmu.wb(mmu.rw(reg.pc), reg.a);
+        reg.pc += 2;
+        reg.m = 4;
+        reg.t = 16;
+    }
+
     // Load to A from B/C memory location
     void LD_A_BCm()
     {
@@ -210,6 +486,14 @@ class Z80 {
         reg.a = mmu.rb(addr);
         reg.m = 2;
         reg.t = 8;
+    }
+
+    void LD_A_mm()
+    {
+        reg.a = mmu.rb(mmu.rw(reg.pc));
+        reg.pc += 2;
+        reg.m = 4;
+        reg.t = 16;
     }
 
     // Load to B/C from PC
@@ -352,6 +636,15 @@ class Z80 {
         reg.t = 8;
     }
 
+    void LD_mm_SP()
+    {
+        // Unsure if this is correct--just guessing
+        mmu.wb(mmu.rw(reg.pc), mmu.rb(reg.sp));
+        reg.pc += 2;
+        reg.m = 5;
+        reg.t = 20;
+    }
+
     void LD_HL_SPn()
     {
         uint16_t value = mmu.rb(reg.pc);
@@ -390,7 +683,7 @@ class Z80 {
         reg.t = 4;
     }
 
-    void ADD_hl()
+    void ADD_A_HL()
     {
         uint16_t sum = reg.a + mmu.rb(reg.hl());
         reg.f = (sum & 0xff) ? Flags::None : Flags::Zero;
@@ -456,7 +749,7 @@ class Z80 {
         reg.t = 4;
     }
 
-    void ADC_HL()
+    void ADC_A_HL()
     {
         uint16_t sum = reg.a + mmu.rb(reg.hl());
         if (reg.has_flags(Flags::Carry)) {
@@ -595,7 +888,7 @@ class Z80 {
         reg.t = 4;
     }
 
-    void AND_HL(uint8_t r)
+    void AND_HL()
     {
         reg.a &= mmu.rb(reg.hl());
         reg.f = reg.a ? Flags::None : Flags::Zero;
@@ -603,7 +896,7 @@ class Z80 {
         reg.t = 8;
     }
 
-    void AND_n(uint8_t r)
+    void AND_n()
     {
         reg.a &= mmu.rb(reg.pc);
         reg.pc++;
@@ -620,7 +913,7 @@ class Z80 {
         reg.t = 4;
     }
 
-    void OR_HL(uint8_t r)
+    void OR_HL()
     {
         reg.a |= mmu.rb(reg.hl());
         reg.f = reg.a ? Flags::None : Flags::Zero;
@@ -628,7 +921,7 @@ class Z80 {
         reg.t = 8;
     }
 
-    void OR_n(uint8_t r)
+    void OR_n()
     {
         reg.a |= mmu.rb(reg.pc);
         reg.pc++;
@@ -645,7 +938,7 @@ class Z80 {
         reg.t = 4;
     }
 
-    void XOR_HL(uint8_t r)
+    void XOR_HL()
     {
         reg.a ^= mmu.rb(reg.hl());
         reg.f = reg.a ? Flags::None : Flags::Zero;
@@ -653,7 +946,7 @@ class Z80 {
         reg.t = 8;
     }
 
-    void XOR_n(uint8_t r)
+    void XOR_n()
     {
         reg.a ^= mmu.rb(reg.pc);
         reg.pc++;
@@ -1242,7 +1535,7 @@ class Z80 {
         RET_cond(reg.has_flags(Flags::Carry));
     }
 
-    void RST_addr(uint16_t addr)
+    void RST(uint16_t addr)
     {
         reg.sp -= 2;
         mmu.ww(reg.sp, reg.pc);
@@ -1282,35 +1575,6 @@ class Z80 {
     {
         std::cerr << "Unknown instruction at address " << reg.pc-1 << "\n";
         stop = 1;
-    }
-
-    void pushbc()
-    {
-        reg.sp--;
-        mmu.wb(reg.sp, reg.b);
-        reg.sp--;
-        mmu.wb(reg.sp, reg.c);
-        clock.m = 3;
-        clock.t = 12;
-    }
-
-    void pophl()
-    {
-        reg.l = mmu.rb(reg.sp);
-        reg.sp++;
-        reg.h = mmu.rb(reg.sp);
-        reg.sp++;
-        clock.m = 3;
-        clock.t = 12;
-    }
-
-    void ldamm()
-    {
-        uint16_t addr = mmu.rw(reg.pc);
-        reg.pc += 2;
-        reg.a = mmu.rb(addr);
-        clock.m = 4;
-        clock.t = 16;
     }
 // }
 };
