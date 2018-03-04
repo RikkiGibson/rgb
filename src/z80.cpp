@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdint>
-#include "mmu.cpp"
+#include "mmu.hpp"
 
 enum class Flags: uint8_t {
     Zero = 0x80,
@@ -98,7 +98,8 @@ class Z80 {
   public:
     Clock clock;
     Registers reg;
-    MMU mmu;
+    MMU &mmu;
+    Z80(MMU &_mmu) : mmu(_mmu) {}
 
     bool halt;
     bool stop;

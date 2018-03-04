@@ -12,7 +12,7 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(PROJECT_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
 include_directories("${PROJECT_SOURCE_DIR}")
 
-add_executable(rgb ${PROJECT_SOURCE_DIR}/rgb.cpp)
+add_executable(rgb ${PROJECT_SOURCE_DIR}/rgb.cpp ${PROJECT_SOURCE_DIR}/mmu.cpp)
 
 # SDL
 # TODO: make this cross-platform
